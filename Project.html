@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Learning Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-8 flex items-center justify-center min-h-screen">
+    <div class="container flex flex-col items-center">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Adaptive Learning Platform</h1>
+            <p class="text-gray-500">Your personalized study system.</p>
+        </header>
+
+        <!-- Document Processing Section -->
+        <div id="file-upload-section" class="w-full flex flex-col items-center text-center transition-opacity duration-500 ease-in-out opacity-100">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 1: Upload a Document</h2>
+            <div class="w-full max-w-sm p-6 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-gray-400 transition-colors">
+                <label for="document-upload" class="flex flex-col items-center justify-center h-full">
+                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-4-4v-1a4 4 0 014-4h14a4 4 0 014 4v1a4 4 0 01-4 4h-1"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12h-2v4h-2v-4H9m6 0a2 2 0 100-4m-2 4a2 2 0 10-4 0m0 0H9m6 0h2m-2-4H7m4 0h2m-2-4a2 2 0 10-4 0"></path>
+                    </svg>
+                    <p class="text-gray-500 mt-2">Drag and drop a file here, or click to browse</p>
+                    <p id="file-name" class="text-sm text-gray-400 mt-1"></p>
+                </label>
+                <input id="document-upload" type="file" accept=".txt" class="hidden">
+            </div>
+            <button id="process-btn" class="mt-6 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors cursor-pointer" disabled>
+                Process Document
+            </button>
+            <p id="status-message" class="mt-4 text-gray-600"></p>
+        </div>
+
+        <!-- Assessment Generation Section (hidden by default) -->
+        <div id="assessment-section" class="w-full hidden flex flex-col items-center transition-opacity duration-500 ease-in-out opacity-0">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">Step 2: Take the Assessment</h2>
+            <div id="quiz-container" class="w-full p-6 bg-gray-50 rounded-xl">
+                <!-- Quiz questions will be dynamically inserted here -->
+            </div>
+            <button id="submit-quiz-btn" class="mt-6 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors cursor-pointer" disabled>
+                Submit Quiz
+            </button>
+        </div>
+
+        <!-- Analytics and Recommendations Section (hidden by default) -->
+        <div id="analytics-section" class="w-full hidden flex flex-col items-center text-center transition-opacity duration-500 ease-in-out opacity-0">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Step 3: Your Results & Recommendations</h2>
+            <div class="w-full p-6 bg-gray-50 rounded-xl text-left">
+                <p id="analytics-summary" class="text-lg font-medium text-gray-700 mb-4"></p>
+                <div id="recommendations-list" class="space-y-2 text-gray-600">
+                    <!-- Recommendations will be dynamically inserted here -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('document-upload');
+            const processBtn = document.getElementById('process-btn');
+            const statusMessage = document.getElementById('status-message');
+            const fileNameDisplay = document.getElementById('file-name');
+            const quizContainer = document.getElementById('quiz-container');
+            const submitQuizBtn = document.getElementById('submit-quiz-btn');
+            const fileUploadSection = document.getElementById('file-upload-section');
+            const assessmentSection = document.getElementById('assessment-section');
+            const analyticsSection = document.getElementById('analytics-section');
+            const analyticsSummary = document.getElementById('analytics-summary');
+            const recommendationsList = document.getElementById('recommendations-list');
+
+            let documentText = '';
+            let quizQuestions = [];
+            let userAnswers = {};
+
+            // Handles file selection
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    fileNameDisplay.textContent = file.name;
+                    processBtn.disabled = false;
+                    statusMessage.textContent = 'File selected. Click "Process Document" to begin.';
+                } else {
+                    fileNameDisplay.textContent = '';
+                    processBtn.disabled = true;
+                    statusMessage.textContent = 'Please select a .txt file to upload.';
+                }
+            });
+
+            // Handles document processing
+            processBtn.addEventListener('click', () => {
+                const file = fileInput.files[0];
+                if (!file) {
+                    statusMessage.textContent = 'No file selected!';
+                    return;
+                }
+                if (file.type !== 'text/plain') {
+                    statusMessage.textContent = 'Please upload a .txt file!';
+                    return;
+                }
+
+                statusMessage.textContent = 'Processing document...';
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    documentText = e.target.result;
+                    simulateProcessing(documentText);
+                };
+                reader.onerror = () => {
+                    statusMessage.textContent = 'Error reading file.';
+                };
+                reader.readAsText(file);
+            });
+
+            // Simulates document processing and quiz generation
+            function simulateProcessing(text) {
+                setTimeout(() => {
+                    statusMessage.textContent = 'Document processed. Generating assessment...';
+                    generateAssessment(text);
+                    setTimeout(() => {
+                        fileUploadSection.classList.add('opacity-0');
+                        setTimeout(() => {
+                            fileUploadSection.classList.add('hidden');
+                            assessmentSection.classList.remove('hidden');
+                            setTimeout(() => assessmentSection.classList.remove('opacity-0'), 100);
+                        }, 500);
+                    }, 500);
+                }, 1500);
+            }
+
+            // Generates quiz questions based on the document text
+            function generateAssessment(text) {
+                quizContainer.innerHTML = '';
+                submitQuizBtn.disabled = false;
+                
+                // Simplified, hardcoded questions based on the document text
+                // In a real application, this would use a more complex algorithm.
+                quizQuestions = [
+                    {
+                        question: "What is the primary purpose of a study system?",
+                        options: ["To play games", "To personalize learning", "To write essays"],
+                        answer: "To personalize learning"
+                    },
+                    {
+                        question: "What tool helps with file processing?",
+                        options: ["An analytics tool", "A file processing tool", "A drawing tool"],
+                        answer: "A file processing tool"
+                    },
+                    {
+                        question: "What are 'AI-driven study recommendations' based on?",
+                        options: ["Random choices", "Your performance", "A coin flip"],
+                        answer: "Your performance"
+                    }
+                ];
+
+                quizQuestions.forEach((q, index) => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.className = 'mb-6 p-4 bg-white rounded-xl border border-gray-200';
+                    questionDiv.innerHTML = `
+                        <p class="font-medium text-gray-800 mb-3">Q${index + 1}: ${q.question}</p>
+                        <div class="space-y-2">
+                            ${q.options.map((option, optIndex) => `
+                                <label class="flex items-center space-x-2 cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <input type="radio" name="question-${index}" value="${option}" class="text-blue-600 focus:ring-blue-500">
+                                    <span class="text-gray-700">${option}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                    quizContainer.appendChild(questionDiv);
+                });
+            }
+
+            // Handles quiz submission and calculates score
+            submitQuizBtn.addEventListener('click', () => {
+                let correctAnswers = 0;
+                quizQuestions.forEach((q, index) => {
+                    const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
+                    if (selectedOption && selectedOption.value === q.answer) {
+                        correctAnswers++;
+                    }
+                });
+
+                showAnalytics(correctAnswers, quizQuestions.length);
+                assessmentSection.classList.add('opacity-0');
+                setTimeout(() => {
+                    assessmentSection.classList.add('hidden');
+                    analyticsSection.classList.remove('hidden');
+                    setTimeout(() => analyticsSection.classList.remove('opacity-0'), 100);
+                }, 500);
+            });
+
+            // Displays progress analytics and recommendations
+            function showAnalytics(score, total) {
+                analyticsSummary.textContent = `You scored ${score} out of ${total} (${Math.round((score / total) * 100)}%).`;
+                generateRecommendations(score, total);
+            }
+
+            // Provides AI-driven study recommendations
+            function generateRecommendations(score, total) {
+                recommendationsList.innerHTML = '';
+                const percentage = (score / total) * 100;
+                let recommendationText = '';
+
+                if (percentage === 100) {
+                    recommendationText = "Excellent job! You've mastered the content. Consider exploring more advanced topics related to your document.";
+                } else if (percentage >= 70) {
+                    recommendationText = "Good work! You have a solid understanding. Review the questions you got wrong to reinforce your knowledge and aim for a perfect score next time.";
+                } else {
+                    recommendationText = "It seems you may need a deeper review. We recommend re-reading the document carefully, paying close attention to the key concepts mentioned in the quiz questions.";
+                }
+
+                const recItem = document.createElement('li');
+                recItem.className = 'p-3 bg-white border border-gray-200 rounded-lg';
+                recItem.textContent = recommendationText;
+                recommendationsList.appendChild(recItem);
+            }
+        });
+    </script>
+</body>
+</html>
